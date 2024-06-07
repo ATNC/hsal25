@@ -2,13 +2,25 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_ecr_repository" "fastapi_app" {
+# Check if the ECR repository already exists
+data "aws_ecr_repository" "existing_repo" {
   name = "hsal25"
+}
+
+# Create the ECR repository if it does not exist
+resource "aws_ecr_repository" "fastapi_app" {
+  count = length(data.aws_ecr_repository.existing_repo.id) == 0 ? 1 : 0
+  name  = "hsal25"
+}
+
+# Use the existing ECR repository if it exists
+locals {
+  ecr_repo_name = length(data.aws_ecr_repository.existing_repo.id) > 0 ? data.aws_ecr_repository.existing_repo.name : aws_ecr_repository.fastapi_app[0].name
 }
 
 resource "aws_instance" "app" {
   count         = 2
-  ami           = "ami-00975bcf7116d087c" # Use the appropriate AMI ID for your region
+  ami           = "ami-00975bcf7116d087c" # Provided AMI ID for eu-central-1
   instance_type = "t2.micro"
   key_name      = var.key_name
 
@@ -31,7 +43,7 @@ resource "aws_instance" "app" {
 
 resource "aws_elb" "app" {
   name               = "fastapi-app-elb"
-  availability_zones = ["us-west-2a", "us-west-2b"] # Update with your availability zones
+  availability_zones = ["eu-central-1a", "eu-central-1b"] # Update with your availability zones
 
   listener {
     instance_port     = 80
@@ -57,4 +69,8 @@ resource "aws_elb" "app" {
 
 output "elb_dns_name" {
   value = aws_elb.app.dns_name
+}
+
+output "instances" {
+  value = aws_instance.app[*].public_dns
 }
