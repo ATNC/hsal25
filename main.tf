@@ -8,7 +8,7 @@ resource "aws_ecr_repository" "fastapi_app" {
 
 resource "aws_instance" "app" {
   count         = 2
-  ami           = "ami-0c55b159cbfafe1f0" # Use the appropriate AMI ID for your region
+  ami           = "ami-00975bcf7116d087c" # Use the appropriate AMI ID for your region
   instance_type = "t2.micro"
   key_name      = var.key_name
 
