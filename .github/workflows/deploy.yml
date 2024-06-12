@@ -28,13 +28,11 @@ jobs:
       run: aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REGISTRY }}
 
     - name: Build and push Docker image
-      env:
-        ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
-        ECR_REPOSITORY: hsal25
-        IMAGE_TAG: latest
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.AWS_ECR_REGISTRY }}/hsal25:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -57,13 +55,16 @@ jobs:
     - name: Terraform Init
       run: terraform init
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
 
-    - name: Add SSH key
-      run: |
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
-        chmod 600 key.pem
+    - name: Terraform Apply
+      run: terraform apply tfplan
+
+    - name: Install SSH Key
+      uses: webfactory/ssh-agent@v0.5.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Deploy to EC2 Instances
       env:
@@ -71,7 +72,7 @@ jobs:
         AWS_ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
       run: |
         for instance_id in $(terraform output -json instances | jq -r '.[]'); do
-          ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$instance_id <<EOF
+          ssh ec2-user@$instance_id << EOF
           $(aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ECR_REGISTRY)
           docker pull $AWS_ECR_REGISTRY/hsal25:latest
           docker stop fastapi-app || true
