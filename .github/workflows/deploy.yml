@@ -71,8 +71,8 @@ jobs:
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
       run: |
-        for instance_id in $(terraform output -json instances | jq -r '.[]'); do
-          ssh ec2-user@$instance_id <<EOF
+        for instance_ip in $(terraform output -json instances | jq -r '.[]'); do
+          ssh -o StrictHostKeyChecking=no ec2-user@$instance_ip <<EOF
           $(aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ECR_REGISTRY)
           docker pull $AWS_ECR_REGISTRY/hsal25:latest
           docker stop fastapi-app || true

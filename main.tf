@@ -24,6 +24,8 @@ resource "aws_instance" "app" {
   instance_type = "t2.micro"
   key_name      = var.key_name
 
+  associate_public_ip_address = true
+
   tags = {
     Name = "fastapi-app-instance-${count.index + 1}"
   }
@@ -79,5 +81,5 @@ output "elb_dns_name" {
 }
 
 output "instances" {
-  value = aws_instance.app[*].public_dns
+  value = aws_instance.app[*].public_ip
 }
