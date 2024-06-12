@@ -41,7 +41,14 @@ resource "aws_instance" "app" {
   }
 }
 
+# Check if the ELB already exists
+data "aws_elb" "existing_elb" {
+  name = "fastapi-app-elb"
+}
+
+# Create the ELB if it does not exist
 resource "aws_elb" "app" {
+  count              = length(data.aws_elb.existing_elb.name) == 0 ? 1 : 0
   name               = "fastapi-app-elb"
   availability_zones = ["eu-central-1a", "eu-central-1b"] # Update with your availability zones
 
@@ -68,7 +75,7 @@ resource "aws_elb" "app" {
 }
 
 output "elb_dns_name" {
-  value = aws_elb.app.dns_name
+  value = length(data.aws_elb.existing_elb.name) > 0 ? data.aws_elb.existing_elb.dns_name : aws_elb.app[0].dns_name
 }
 
 output "instances" {
