@@ -78,3 +78,4 @@ jobs:
         docker rm fastapi-app || true
         docker run -d --name fastapi-app -p 80:80 $AWS_ECR_REGISTRY/hsal25:latest
         done
+        EOF
